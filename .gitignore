@@ -1,3 +1,4 @@
+*.cbtlog
 logs/
 npm-debug.log
 yarn-error.log

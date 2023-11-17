@@ -1,3 +1,4 @@
+const fs = require('fs')
 class AppBootHook {
   constructor(app) {
     this.app = app
@@ -42,7 +43,7 @@ class AppBootHook {
   // 常用
   // worker 准备就绪，应用已启动
   async didReady() {
-    console.log(`=================应用已启动=================`)
+    fs.appendFileSync('sys.cbtlog', `${new Date().toLocaleString()} 应用启动\n`)
     const ctx = await this.app.createAnonymousContext()
     // await ctx.service.Biz.request()
 
