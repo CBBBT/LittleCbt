@@ -1,33 +1,35 @@
-# demo
+# LittleCbt
 
+[讯飞开放平台][讯飞开放平台]
 
+## 快速开始
 
-## QuickStart
-
-<!-- add docs here for user -->
-
-see [egg docs][egg] for more detail.
-
-### Development
+### 开发
 
 ```bash
 $ npm i
 $ npm run dev
-$ open http://localhost:7001/
 ```
 
-### Deploy
+### 部署
 
 ```bash
 $ npm start
 $ npm stop
 ```
 
-### npm scripts
+### 日志
 
-- Use `npm run lint` to check code style.
-- Use `npm test` to run unit test.
-- Use `npm run autod` to auto detect dependencies upgrade, see [autod](https://www.npmjs.com/package/autod) for more detail.
+- `spark.cbtlog` 星火大模型运行日志
+- `sys.cbtlog` 系统运行日志
 
+### 文档
 
-[egg]: https://eggjs.org
+- [egg.js 文档][egg]
+- [wechaty 文档][wechaty]
+- [星火大模型 API 文档][星火大模型API文档]
+
+[egg]: https://www.eggjs.org/zh-CN/intro/quickstart
+[wechaty]: https://wechaty.github.io/wechaty/
+[星火大模型API文档]: https://www.xfyun.cn/doc/spark/Web.html#_1-%E6%8E%A5%E5%8F%A3%E8%AF%B4%E6%98%8E
+[讯飞开放平台]: https://console.xfyun.cn/services/cbm
