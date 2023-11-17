@@ -49,26 +49,15 @@ const onMessage = async (message) => {
       // 有人@我
       const beMentioned = await message.mentionSelf()
       if (beMentioned) {
-        room.say(`@我干啥啊？`, contact)
+        let answer = await ctx.service.spark.webSocketSend(text)
+        room.say(answer, contact)
       }
     }
     // 私聊
     else {
       console.log(`${contact.name()}：${text}`)
-      // message.say(`收到消息: ${ text }`)
-    }
-  }
-
-  // 撤回的消息
-  if (message.type() === wechaty.Message.Type.Recalled) {
-    // 在微信群里
-    if (room) {
-      const topic = await room.topic()
-      console.log(`【群聊 ${topic}】${contact.name()}撤回了一条消息}`)
-    }
-    // 私聊
-    else {
-      console.log(`${contact.name()}撤回了一条消息`)
+      let answer = await ctx.service.spark.webSocketSend(text)
+      message.say(answer)
     }
   }
 }
@@ -97,9 +86,11 @@ const MessageTypeMap = {
 }
 
 const { Service } = require('egg')
+let ctx
 class WechatService extends Service {
   async start() {
     fs.appendFileSync('sys.cbtlog', `${new Date().toLocaleString()} 启动微信机器人\n`)
+    ctx = this.ctx
     wechaty
       .on('scan', onScan)
       .on('login', onLogin)
