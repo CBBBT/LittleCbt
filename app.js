@@ -38,6 +38,11 @@ class AppBootHook {
     // 可以做一些数据初始化等操作，这些操作成功才会启动应用
     // 例如：从数据库加载数据到内存缓存
     // this.app.cacheData = await this.app.model.query(QUERY_CACHE_SQL)
+
+    // 获取最近一次的会话id，并生成当前会话id
+    const ctx = await this.app.createAnonymousContext()
+    let version = await ctx.service.mysql.getNowVersion('spark')
+    this.app.config.spark.version = +version + 1
   }
 
   // 常用

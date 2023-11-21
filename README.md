@@ -21,6 +21,7 @@ $ npm stop
 ### 日志
 
 - `spark.cbtlog` 星火大模型运行日志
+- `sql.cbtlog` 数据库执行日志
 - `sys.cbtlog` 系统运行日志
 
 ### 文档

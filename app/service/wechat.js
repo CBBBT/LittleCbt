@@ -31,38 +31,76 @@ const onScan = (code, status) => {
   }
 }
 const onMessage = async (message) => {
-  fs.appendFileSync('sys.cbtlog', `${new Date().toLocaleString()} 收到消息【${MessageTypeMap[message.type()]}(${message.type()})】\n\t\t${message}\n`)
+  const messageType = `${MessageTypeMap[message.type()]}(${message.type()})`
+  fs.appendFileSync('sys.cbtlog', `${new Date().toLocaleString()} 收到消息【${messageType}】\n\t\t${message}\n`)
   // 发送消息的用户
   const contact = message.talker()
+  const contactName = contact.name()
   // 微信群
   const room = message.room()
+  // 消息文本
+  const text = message.text()
+  const messageText = text.replace(new RegExp(`@${myWeChatName}`, 'g'), '').trim()
+
+  // 清空上下文
+  if (messageText === '清空上下文') {
+    await ctx.service.mysql.insertMessage({ role: 'command', contactName, messageType: '命令', messageText, mentionSelf: 1 })
+    app.config.spark.version++
+    message.say(`好的捏，当前为会话${app.config.spark.version}`)
+    return
+  }
+
+  // 切换大模型
+  // todo
 
   // 收到文字消息
   if (message.type() === wechaty.Message.Type.Text) {
-    // 消息文本
-    const text = message.text()
-
-    // 在微信群里
+    // 在微信群里，仅记录被@消息
     if (room) {
       const topic = await room.topic()
-      console.log(`【群聊 ${topic}】${contact.name()}：${text}`)
       // 有人@我
       const beMentioned = await message.mentionSelf()
       if (beMentioned) {
-        let answer = await ctx.service.spark.webSocketSend(text)
-        room.say(answer, contact)
+        // 插入用户消息记录
+        await ctx.service.mysql.insertMessage({ role: 'user', roomTopic: topic, contactName, messageType, messageText, mentionSelf: 1 })
+        // 获取聊天记录上下文发起提问，生成回答并发送到微信
+        let history = await ctx.service.mysql.selectMessageFilter(`roomTopic = "${topic}"`)
+        let answer = await ctx.service.spark.getAiAnswer(text, history)
+        room.say(answer)
+        // room.say(answer, contact)
+        // 插入 AI 回答记录
+        await ctx.service.mysql.insertMessage({
+          role: 'assistant',
+          roomTopic: topic,
+          contactName,
+          messageType: '文本(7)',
+          messageText: answer,
+          mentionSelf: 1,
+        })
       }
     }
     // 私聊
     else {
-      console.log(`${contact.name()}：${text}`)
-      let answer = await ctx.service.spark.webSocketSend(text)
+      // 插入用户消息记录
+      await ctx.service.mysql.insertMessage({ role: 'user', contactName, messageType, messageText, mentionSelf: 1 })
+      // 获取聊天记录上下文发起提问，生成回答并发送到微信
+      let history = await ctx.service.mysql.selectMessageFilter(`roomTopic is null AND contactName = "${contactName}"`)
+      let answer = await ctx.service.spark.getAiAnswer(text, history)
       message.say(answer)
+      // 插入 AI 回答记录
+      await ctx.service.mysql.insertMessage({
+        role: 'assistant',
+        contactName,
+        messageText: answer,
+        messageType: '文本(7)',
+        mentionSelf: 1,
+      })
     }
   }
 }
 const onLogin = async (user) => {
-  fs.appendFileSync('sys.cbtlog', `${new Date().toLocaleString()} 微信用户《${user.name()}》登录成功\n`)
+  myWeChatName = user.name()
+  fs.appendFileSync('sys.cbtlog', `${new Date().toLocaleString()} 微信用户《${myWeChatName}》登录成功\n`)
 }
 
 const MessageTypeMap = {
@@ -86,10 +124,13 @@ const MessageTypeMap = {
 }
 
 const { Service } = require('egg')
+let app
 let ctx
+let myWeChatName = ''
 class WechatService extends Service {
   async start() {
     fs.appendFileSync('sys.cbtlog', `${new Date().toLocaleString()} 启动微信机器人\n`)
+    app = this.app
     ctx = this.ctx
     wechaty
       .on('scan', onScan)

@@ -6,7 +6,7 @@ const fs = require('fs')
 class SparkService extends Service {
   getWebsocketUrl() {
     // 获取 APIKey 和 APISecret 参数
-    const { API_KEY, API_SECRET, WS_URL } = this.ctx.app.config.spark
+    const { API_KEY, API_SECRET, WS_URL } = this.app.config.spark
     // 鉴权参数
     let host = 'spark-api.xf-yun.com'
     let path = '/v3.1/chat'
@@ -45,14 +45,14 @@ class SparkService extends Service {
   }
 
   // websocket发送数据
-  async webSocketSend(text) {
+  async getAiAnswer(question, history) {
     let { socket, error } = await this.connect()
     if (!socket) return error
 
     return new Promise((resolve, reject) => {
       let params = {
         header: {
-          app_id: this.ctx.app.config.spark.APPID,
+          app_id: this.app.config.spark.APPID,
           uid: 'little-cbt',
         },
         parameter: {
@@ -65,9 +65,10 @@ class SparkService extends Service {
         payload: {
           message: {
             text: [
+              ...this.renderHistory(history),
               {
                 role: 'user',
-                content: text,
+                content: question,
               },
             ],
           },
@@ -76,14 +77,17 @@ class SparkService extends Service {
       let answerOfAI = ''
 
       socket.on('message', (data) => {
-        fs.appendFileSync('spark.cbtlog', `${new Date().toLocaleString()} socket接收数据\n`)
         let jsonData = JSON.parse(data)
+
         // 提问失败
         if (jsonData.header.code !== 0) {
           answerOfAI = `提问失败：${jsonData.header.message}`
+          fs.appendFileSync('spark.cbtlog', `${new Date().toLocaleString()} socket接收数据：${answerOfAI}\n`)
           socket.close()
         } else {
-          answerOfAI += jsonData.payload.choices.text.map((x) => x.content).join('')
+          let answer = jsonData.payload.choices.text.map((x) => x.content).join('')
+          answerOfAI += answer
+          fs.appendFileSync('spark.cbtlog', `${new Date().toLocaleString()} socket接收数据：${answer}\n`)
           if (jsonData.header.status === 2) {
             socket.close()
             resolve(answerOfAI)
@@ -94,6 +98,10 @@ class SparkService extends Service {
       fs.appendFileSync('spark.cbtlog', `${new Date().toLocaleString()} socket发送数据\n`)
       socket.send(JSON.stringify(params))
     })
+  }
+  // 生成历史聊天记录
+  renderHistory(history) {
+    return history.map((h) => ({ role: h.role, content: h.messageText }))
   }
 }
 
